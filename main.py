@@ -122,5 +122,5 @@ with conn:
 mng = plt.get_current_fig_manager()
 mng.full_screen_toggle()
 # mng.resize(1400, 600)
-
+plt.savefig('plots.png', bbox_inches='tight')
 plt.show()
