@@ -1,35 +1,54 @@
+import json
+import decimal
 import psycopg2
-import pandas as pd
+from psycopg2.extras import RealDictCursor
+from datetime import date
 
+class CustomEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            return str(o)
+        elif isinstance(o, date):
+            return o.isoformat()
+        return super(CustomEncoder, self).default(o)
 
 db_params = {
     "host": "localhost",
-    "database": "lab4_games",
+    "database": "test_db_lab",
     "user": "omivan",
     "password": "0104",
     "port": "5432",
 }
 
-def export_table_to_json(conn, table_name):
-    query = f"SELECT * FROM {table_name}"
-    df = pd.read_sql_query(query, conn)
-    df.to_json(f"json_saved_files/{table_name}.json", orient="records")
+def export_data_to_json(connection, output_file):
+    try:
+        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
 
+            cursor.execute("SELECT table_name FROM information_schema.tables "
+                           "WHERE table_schema = 'public'")
+            tables = [table['table_name'] for table in cursor.fetchall()]
+
+            all_data = {}
+
+            for table in tables:
+
+                cursor.execute(f"SELECT * FROM {table}")
+                table_data = cursor.fetchall()
+
+                all_data[table] = table_data
+
+            with open(output_file, 'w') as json_file:
+                json.dump(all_data, json_file, indent=2, cls=CustomEncoder)
+
+            print(f'Data exported to {output_file} ')
+
+    except psycopg2.Error as e:
+        print(f"Error: {e}")
 
 try:
-    conn = psycopg2.connect(**db_params)
-
-    # Export each table to CSV
-    table_names = ["game", "company", "genre", "publish", "develop", "game_genre"]
-    for table_name in table_names:
-        export_table_to_json(conn, table_name)
-
-    print("JSON files exported successfully.")
-
+    connection = psycopg2.connect(**db_params)
+    export_data_to_json(connection, 'export.json')
+except psycopg2.Error as e:
+    print(f"PostgreSQL Error: {e}")
 except Exception as e:
-    print(f"Error: {e}")
-
-finally:
-    # Close the database connection
-    if conn:
-        conn.close()
+    print(f"Unexpected error: {e}")

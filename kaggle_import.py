@@ -16,7 +16,7 @@ def read_csv():
 def db_connect():
     username = 'omivan'
     password = '0104'
-    database = 'lab4_games'
+    database = 'test_db_lab'
     host = 'localhost'
     port = '5432'
     conn = psycopg2.connect(user=username, password=password,
@@ -42,6 +42,15 @@ def create_genre_table(conn):
                     f"PRIMARY KEY (genre_id));")
 
 
+def create_game_users_table(conn):
+    with conn:
+        cur = conn.cursor()
+        cur.execute(f"DROP TABLE IF EXISTS game_users CASCADE;")
+        cur.execute(f"CREATE TABLE game_users(game_id INT NOT NULL,"
+                    f"users_number INT NOT NULL,"
+                    f"date DATE NOT NULL,"
+                    f"PRIMARY KEY (game_id, date),"
+                    f"FOREIGN KEY (game_id) REFERENCES game(game_id));")
 def create_game_table(conn):
     with conn:
         cur = conn.cursor()
@@ -49,7 +58,6 @@ def create_game_table(conn):
         cur.execute(f"CREATE TABLE game(game_id INT NOT NULL,"
                     f"name VARCHAR(50) NOT NULL,"
                     f"release_date DATE NOT NULL,"
-                    f"users_number INT NOT NULL,"
                     f"PRIMARY KEY (game_id));")
 
 
@@ -103,15 +111,17 @@ def insert_genre(cur, genre_name):
         return new_genre_id
 
 
-def insert_game(cur, game_name, users_number, release_date='2004-04-01'):
+def insert_game(cur, game_name, release_date='2022-01-11'):
     cur.execute("SELECT MAX(game_id) FROM game")
     max_game_id = cur.fetchone()[0] or 0
     new_game_id = max_game_id + 1
-    cur.execute("INSERT INTO game(game_id, name, release_date, users_number)"
-                " VALUES (%s, %s, %s, %s)",
-                (new_game_id, game_name, release_date, users_number))
+    cur.execute("INSERT INTO game(game_id, name, release_date)"
+                " VALUES (%s, %s, %s)",
+                (new_game_id, game_name, release_date))
     return new_game_id
-
+def link_game_users(cur, game_id, users_number, date='2022-04-01'):
+    cur.execute("INSERT INTO game_users(game_id, users_number, date) VALUES (%s, %s, %s)",
+                (game_id, users_number, date))
 
 def link_game_genre(cur, game_id, genre_id):
     cur.execute("SELECT COUNT(*) FROM game_genre WHERE genre_id = %s AND game_id = %s",
@@ -146,11 +156,12 @@ if __name__ == "__main__":
     create_company_table(conn)
     create_genre_table(conn)
     create_game_table(conn)
+    create_game_users_table(conn)
     create_game_genre_table(conn)
     create_develop_publish_table(conn, "publish")
     create_develop_publish_table(conn, "develop")
     for index, row in data.iterrows():
-        if index == 10001:
+        if index == 101:
             break
         with conn:
             cur = conn.cursor()
@@ -176,7 +187,8 @@ if __name__ == "__main__":
         developers_ids = [insert_company(cur, x) for x in developers]
         publishers_ids = [insert_company(cur, x) for x in publishers]
         genres_ids = [insert_genre(cur, x) for x in genres]
-        game_id = insert_game(cur, game_name, user_number)
+        game_id = insert_game(cur, game_name)
+        link_game_users(cur, game_id, user_number)
         for x in genres_ids:
             link_game_genre(cur, game_id, x)
         for x in publishers_ids:

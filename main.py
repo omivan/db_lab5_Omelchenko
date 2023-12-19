@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 username = 'omivan'
 password = '0104'
-database = 'lab4_games'
+database = 'test_db_lab'
 host = 'localhost'
 port = '5432'
 
@@ -42,18 +42,21 @@ query_3 = '''
 CREATE VIEW company_total_users AS
 SELECT
   company.name,
-  COALESCE(SUM(game.users_number), 0) AS total_users
+  COALESCE(SUM(game_users.users_number), 0) AS total_users
 FROM
   company
 LEFT JOIN
   publish ON company.company_id = publish.company_id
 LEFT JOIN
   game ON publish.game_id = game.game_id
+LEFT JOIN
+  game_users ON game.game_id = game_users.game_id
+WHERE
+  game_users.date = '2022-04-01'
 GROUP BY
   company.company_id, company.name
 ORDER BY
-  COALESCE(SUM(game.users_number), 0) DESC;
-
+  COALESCE(SUM(game_users.users_number), 0) DESC;
 '''
 
 conn = psycopg2.connect(user=username, password=password, dbname=database, host=host, port=port)
@@ -117,7 +120,7 @@ with conn:
     graph_ax.set_ylabel('Кількість користувачів')
     graph_ax.set_xticklabels(companies, rotation=45, ha="right")
     graph_ax.plot(companies, users_num, color='blue', marker='o')
-    graph_ax.set_title('Топ 5 компанії за кількістю користувачів')
+    graph_ax.set_title('Топ 5 компаній за кількістю користувачів(Nov 2022)')
 
 mng = plt.get_current_fig_manager()
 mng.full_screen_toggle()

@@ -4,7 +4,7 @@ import pandas as pd
 
 db_params = {
     "host": "localhost",
-    "database": "lab4_games",
+    "database": "test_db_lab",
     "user": "omivan",
     "password": "0104",
     "port": "5432",
